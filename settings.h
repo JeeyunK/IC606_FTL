@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <climits>
+#include <queue>
+#include <string>
+#include <cstring>
 
 #define K (1024)
 #define M (1024*K)
@@ -21,6 +25,8 @@
 #define NOP (NOB*PPB)
 #define LBANUM (LOGSIZE/PGSIZE)
 
+using namespace std;
+
 typedef struct mapping_unit{
 	uint32_t lba;
 	uint32_t ppa;
@@ -33,12 +39,24 @@ typedef struct user_request{
 	int io_size;
 }user_request;
 
+typedef struct block {
+	int index;
+	int page;
+}BLOCK;
+
+typedef struct OOB {
+	uint32_t lba;
+}OOB;
+
 typedef struct SSD {
         bool *itable; //valid table, valid=1
         int mtable_size; //mapping table size ratio (flash/memory)
         m_unit *mtable; // mapping table in memory
         uint32_t *fmtable; // mapping table in flash device
         int *ictable; //invalid page count per block
+	BLOCK active;
+	OOB *oob;
+	queue<int> freeq;		
 }SSD;
 
 typedef struct STATS {
