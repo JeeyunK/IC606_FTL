@@ -19,6 +19,7 @@ process.o: process.cpp process.h gc.h settings.h
 gc.o: gc.cpp gc.h process.h settings.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
+
 clean:
 	rm -f *.o
 	rm -f $(TARGET)
