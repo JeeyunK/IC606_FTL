@@ -2,7 +2,7 @@
 #include "gc.h"
 #include "map.h"
 
-uint32_t target_ppa = 8437246;
+uint32_t target_ppa = UINT_MAX-2;
 extern queue<int> freeq;
 
 uint32_t get_ppa(SSD* ssd, STATS* stats) {
@@ -14,11 +14,6 @@ uint32_t get_ppa(SSD* ssd, STATS* stats) {
 		ssd->active.index = freeq.front();
 		freeq.pop();
 		ssd->active.page = 0;
-	}
-
-	if (freeq.size() == 0) {
-		//need new free block
-		do_gc(ssd, stats);
 	}
 	
 	int ret = ssd->active.index*PPB+ssd->active.page;

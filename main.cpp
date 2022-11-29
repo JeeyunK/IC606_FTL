@@ -147,6 +147,7 @@ int main(int argc, char **argv) {
 	workload = argv[1];
 	
 	signal(SIGINT, sig_handler);	
+	//signal(SIGABRT, sig_handler);
 	/* initialize SSD structures
 	 */
 	ssd->mtable_size = atoi(argv[2]);

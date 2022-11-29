@@ -4,6 +4,7 @@
 
 extern char RPOLICY;
 extern uint32_t target_ppa;
+extern queue<int> freeq;
 
 /*check mapping table hit
  * if miss, do replacement (or load)
@@ -80,7 +81,6 @@ void read(uint32_t lba, SSD *ssd, STATS* stats) {
 	return;
 }
 
-char cnt=0;
 void write(uint32_t lba, SSD* ssd, STATS* stats) {
 	stats->write++;
 	int mindex = check_mtable(lba, ssd, stats);
@@ -92,13 +92,11 @@ void write(uint32_t lba, SSD* ssd, STATS* stats) {
 	uint32_t new_ppa = get_ppa(ssd, stats);
 	if (new_ppa == target_ppa) {
 		printf("lba: %u, prev ppa: %u, new ppa: %u\n", lba, ppa, new_ppa);
-		cnt++;
-		if (cnt == 4) abort();
 	}
 	//printf("%d\n", ppa);
 	update_mtable(mindex, new_ppa, ssd);
 	validate_ppa(new_ppa, lba, ssd);
-	
+	if (freeq.size() == 0) do_gc(ssd, stats);	
 	//TODO add flash access latency
 }
 
