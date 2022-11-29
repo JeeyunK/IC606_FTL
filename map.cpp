@@ -72,7 +72,7 @@ void read(uint32_t lba, SSD *ssd, STATS* stats) {
 	int mindex = check_mtable(lba, ssd, stats);
 	uint32_t ppa = ssd->mtable[mindex].ppa;
 	if (ppa == UINT_MAX) {
-		printf("READ) There is no ppa info in LBA: %u\n", lba);
+		//printf("READ) There is no ppa info in LBA: %u\n", lba);
 		return;
 	}
 

@@ -76,10 +76,11 @@ void simul_info(SSD *ssd, STATS *stats, int progress) {
 	printf("[progress: %d%%] WAF: %.3f\n", progress, waf);
 	printf("WRITEBACK: %llu\nCACHE MISS: %llu\nCACHE HIT: %llu\n", 
 			stats->writeback, stats->cache_miss, stats->cache_hit);
+	printf("=====================\n");
 }
 
 void display_result(STATS* stats) {
-	printf("=======================================================\n");
+	printf("\n=======================================================\n");
 	printf("Experimental result [ %s ]\n\n", RPOLICY? "test":"FIFO");
 	printf("(workload: %s)\n", workload);
 	printf("* # of request : %llu / %llu\n", stats->cur_req, stats->tot_req);
@@ -112,7 +113,7 @@ void req_processing(char *raw_req, user_request *req) {
  */
 void ssd_simulation( SSD *ssd, STATS *stats, char* workload) {
 	char raw_req[128];
-	char load_mark[128];
+	char load_mark[128] = "LOAD_END\n";
 	user_request *ureq = (user_request*)malloc(sizeof(user_request));
 	FILE *wktrace = fopen(workload, "r");
 	
@@ -163,5 +164,6 @@ int main(int argc, char **argv) {
 	
 	ssd_simulation(ssd, stats, workload);
 
+	display_result(stats);
 	return 0;
 }
