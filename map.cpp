@@ -1,9 +1,8 @@
 #include "settings.h"
-#include "process.h"
+#include "map.h"
 #include "gc.h"
 
-
-#define RPOLICY 0 //0: fifo
+extern char RPOLICY;
 
 /*check mapping table hit
  * if miss, do replacement (or load)
@@ -34,6 +33,7 @@ int check_mtable(uint32_t lba, SSD* ssd, STATS* stats) {
 		stats->cache_hit++;
 		return entry_index;
 	}
+	return 0;
 }
 
 int update_mtable(int index, uint32_t ppa, SSD* ssd) {
@@ -51,6 +51,7 @@ int m_fifo(uint32_t lba, SSD* ssd, STATS* stats) {
 		stats->writeback++;
 	}
 	ssd->mtable[findex].dirty = false;
+	ssd->mtable[findex].ppa = UINT_MAX;
 	ssd->mtable[findex].lba = UINT_MAX;
 	int ret = findex;
 	findex++;
@@ -59,6 +60,7 @@ int m_fifo(uint32_t lba, SSD* ssd, STATS* stats) {
 }
 
 void read(uint32_t lba, SSD *ssd, STATS* stats) {
+	stats->read++;
 	int mindex = check_mtable(lba, ssd, stats);
 	uint32_t ppa = ssd->mtable[mindex].ppa;
 	if (ppa == UINT_MAX) {
@@ -79,6 +81,7 @@ void write(uint32_t lba, SSD* ssd, STATS* stats) {
 		invalidate_ppa(ppa, ssd);
 	}
 	ppa = get_ppa(ssd, stats);
+	//printf("%d\n", ppa);
 	update_mtable(mindex, ppa, ssd);
 	validate_ppa(ppa, lba, ssd);
 
@@ -86,6 +89,7 @@ void write(uint32_t lba, SSD* ssd, STATS* stats) {
 }
 
 void trim(uint32_t lba, SSD* ssd, STATS* stats) {
+	stats->trim++;
 	int mindex = check_mtable(lba, ssd, stats);
 	uint32_t ppa = ssd->mtable[mindex].ppa;
 	if (ppa != UINT_MAX) invalidate_ppa(ppa, ssd);
@@ -104,7 +108,10 @@ int submit_io(SSD *ssd, STATS *stats, user_request *req) {
 	} else if (req->op == 3) {
 		//discard
 		for (int i=0;i<req_num;i++) trim(req->lba+i, ssd, stats);
-	}else return 1;
+	}else {
+		stats->trash++;
+		return 1;
+	}
 
 	return 0;
 }

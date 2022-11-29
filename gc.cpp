@@ -1,6 +1,6 @@
 #include "settings.h"
 #include "gc.h"
-#include "process.h"
+#include "map.h"
 
 extern queue<int> freeq;
 
@@ -11,6 +11,7 @@ uint32_t get_ppa(SSD* ssd, STATS* stats) {
 			printf("GET_PPA) something's wrong with queue\n");
 		}
 		ssd->active.index = freeq.front();
+		freeq.pop();
 		ssd->active.page = 0;
 	}
 
@@ -36,6 +37,8 @@ int do_gc(SSD* ssd, STATS* stats) {
 			invalid_count = ssd->ictable[i];
 		}
 	}
+
+	//printf("victim block: %d, invalid cnt: %d\n\n", victim, invalid_count);
 	
 	/* copy valid pages
 	 * i: ppa
@@ -66,7 +69,7 @@ int do_gc(SSD* ssd, STATS* stats) {
 }
 
 int validate_ppa(uint32_t ppa, uint32_t lba, SSD* ssd) {
-	if (ssd->itable[ppa] == 1) {
+	if (ssd->itable[ppa] == true) {
 		printf("valid information err in ppa %u\n", ppa);
 		abort();
 	}

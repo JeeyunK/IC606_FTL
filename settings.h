@@ -8,6 +8,7 @@
 #include <queue>
 #include <string>
 #include <cstring>
+#include <iostream>
 
 #define K (1024)
 #define M (1024*K)
@@ -65,6 +66,9 @@ typedef struct STATS {
         unsigned long long tot_req; //# of total request
         
 	unsigned long long write;
+	unsigned long long read;
+	unsigned long long trim;
+	unsigned long long trash;
 	unsigned long long copy; // # of copy (for calculating WAF)
 	unsigned long long writeback;
 	unsigned long long cache_miss;
