@@ -3,37 +3,42 @@
 #include "gc.h"
 
 extern char RPOLICY;
+extern uint32_t target_ppa;
 
 /*check mapping table hit
  * if miss, do replacement (or load)
  */
 int check_mtable(uint32_t lba, SSD* ssd, STATS* stats) {
-	int i=0;
 	int entry_index=-1;
-	while (ssd->mtable[i].lba != UINT_MAX) {
+	/* check cached mapping table
+	 */
+	for (int i=0;i<ssd->mtable_size; i++) {
 		if (ssd->mtable[i].lba == lba) {
 			entry_index = i;
 			break;
 		}
-		i++;
-		if (i == (ssd->mtable_size-1)) break;
 	}
 	if (entry_index == -1) {
 		/* need replacement
 		 */
 		stats->cache_miss++;
+		/*select replacement policy
+		 */
 		if (RPOLICY == 0) {
 			entry_index = m_fifo(lba, ssd, stats);
-			ssd->mtable[entry_index].lba = lba;
-			return entry_index;
 		} else if (RPOLICY == 1) {
-			//TODO add replacement policy
+			//TODO ADD REPLACEMENT POLICY
 		}
+		//TODO add flash access latency
+		ssd->mtable[entry_index].lba = lba;
+		ssd->mtable[entry_index].ppa = ssd->fmtable[lba];
 	} else {
+		/*cache hit
+		 */
 		stats->cache_hit++;
-		return entry_index;
 	}
-	return 0;
+
+	return entry_index;
 }
 
 int update_mtable(int index, uint32_t ppa, SSD* ssd) {
@@ -42,6 +47,8 @@ int update_mtable(int index, uint32_t ppa, SSD* ssd) {
 	return 0;
 }
 
+/* select victim using FIFO
+ */
 int findex=0;
 int m_fifo(uint32_t lba, SSD* ssd, STATS* stats) {
 	if (ssd->mtable[findex].dirty == true) {
@@ -73,18 +80,25 @@ void read(uint32_t lba, SSD *ssd, STATS* stats) {
 	return;
 }
 
+char cnt=0;
 void write(uint32_t lba, SSD* ssd, STATS* stats) {
 	stats->write++;
 	int mindex = check_mtable(lba, ssd, stats);
 	uint32_t ppa = ssd->mtable[mindex].ppa;
+	if (ppa == target_ppa) printf("prev ppa is %u, lba: %u\n", target_ppa, lba);
 	if (ppa != UINT_MAX) {
 		invalidate_ppa(ppa, ssd);
 	}
-	ppa = get_ppa(ssd, stats);
+	uint32_t new_ppa = get_ppa(ssd, stats);
+	if (new_ppa == target_ppa) {
+		printf("lba: %u, prev ppa: %u, new ppa: %u\n", lba, ppa, new_ppa);
+		cnt++;
+		if (cnt == 4) abort();
+	}
 	//printf("%d\n", ppa);
-	update_mtable(mindex, ppa, ssd);
-	validate_ppa(ppa, lba, ssd);
-
+	update_mtable(mindex, new_ppa, ssd);
+	validate_ppa(new_ppa, lba, ssd);
+	
 	//TODO add flash access latency
 }
 
@@ -93,10 +107,10 @@ void trim(uint32_t lba, SSD* ssd, STATS* stats) {
 	int mindex = check_mtable(lba, ssd, stats);
 	uint32_t ppa = ssd->mtable[mindex].ppa;
 	if (ppa != UINT_MAX) invalidate_ppa(ppa, ssd);
+	update_mtable(mindex, UINT_MAX, ssd);
 }
 
 int submit_io(SSD *ssd, STATS *stats, user_request *req) {
-	int ret;
 	int req_num = req->io_size/(int)PGSIZE;
 
 	if (req->op == 0) {

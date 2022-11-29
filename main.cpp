@@ -100,8 +100,9 @@ void sig_handler(int signum) {
 }
 
 void req_processing(char *raw_req, user_request *req) {
-	char* tmp = strtok(raw_req, " \t"); //time
-	req->op = (int)(atoi(strtok(NULL, " \t")));
+	//char* tmp = strtok(raw_req, " \t"); //time
+	req->op = (int)(atoi(strtok(raw_req, " \t")));
+	//req->op = (int)(atoi(strtok(NULL, " \t")));
 	req->lba = strtoul(strtok(NULL, " \t"), NULL, 10);
 	req->io_size = atoi(strtok(NULL, " \t"));
 	//printf("op: %d, lba: %u, size: %d\n", req->op, req->lba, req->io_size);
