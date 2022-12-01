@@ -124,7 +124,7 @@ void ssd_simulation( SSD *ssd, STATS *stats, char* workload) {
 			continue;
 		}
 		stats->cur_req++;
-		if (stats->write%262144==0) printf("\rwrite size: %lldGB", stats->write/262144);
+		if (stats->write%262144==0) printf("\rwrite size: %lldGB    ", stats->write/262144);
 		if ((stats->cur_req%(stats->tot_req/50))==0) {
 			progress += 2;
 			simul_info(ssd, stats, progress);
@@ -146,6 +146,9 @@ int main(int argc, char **argv) {
 		abort();
 	}
 	workload = argv[1];
+
+	setbuf(stdout, NULL);
+	setbuf(stderr, NULL);
 	
 	signal(SIGINT, sig_handler);	
 	//signal(SIGABRT, sig_handler);
