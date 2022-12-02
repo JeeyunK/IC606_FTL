@@ -5,6 +5,7 @@
 extern char RPOLICY;
 extern uint32_t target_ppa;
 extern queue<int> freeq;
+extern list<int> lba_list;
 
 /*check mapping table hit
  * if miss, do replacement (or load)
@@ -24,10 +25,11 @@ int check_mtable(uint32_t lba, SSD* ssd, STATS* stats) {
 		 */
 		stats->cache_miss++;
 		/*select replacement policy
-		 */
+	/	 */
 		if (RPOLICY == 0) {
 			entry_index = m_fifo(lba, ssd, stats);
 		} else if (RPOLICY == 1) {
+			entry_index = m_lru(lba, ssd, stats);
 			//TODO ADD REPLACEMENT POLICY
 		}
 		//TODO add flash access latency
@@ -46,6 +48,50 @@ int update_mtable(int index, uint32_t ppa, SSD* ssd) {
 	ssd->mtable[index].ppa = ppa;
 	ssd->mtable[index].dirty = true;
 	return 0;
+}
+
+uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats){ // LRU, update lba-Linked list for finding lru-lba as victim
+	uint32_t victim_lba;
+	list<int>::iterator it;
+	if(lba_list.size() == 0){
+		lba_list.push_front(lba);
+	}else{
+		victim_lba = lba_list.back();
+		lba_list.pop_back();
+		if(victim_lba == lba){
+			lba_list.push_front(lba);
+		}else{
+			for(it = lba_list.begin(); it != lba_list.end(); ++it){
+				if(*it == (int) lba){
+					lba_list.erase(it);
+					lba_list.push_front(lba);
+					break;
+				}
+			}	
+		}
+	}
+	return victim_lba;
+}
+
+int m_lru(uint32_t lba, SSD* ssd, STATS* stats){
+	//TODO. Apply Hashing, too!
+	int victim_lba = update_lba_list(lba, ssd, stats);
+	int entry_index = -1;
+	for (int i=0;i<ssd->mtable_size; i++) {
+		if ((uint32_t) ssd->mtable[i].lba == victim_lba) {
+			entry_index = i;
+			if(ssd->mtable[i].dirty == true){
+				ssd->fmtable[ssd->mtable[i].lba] = ssd->mtable[entry_index].ppa;
+				stats->writeback++;
+			}
+			break;
+		}
+	}
+	ssd->mtable[entry_index].dirty = false;
+	ssd->mtable[entry_index].ppa = UINT_MAX;
+	ssd->mtable[entry_index].lba = UINT_MAX;
+	//if (entry_index == (ssd->mtable_size)) entry_index = 0;
+	return entry_index;
 }
 
 /* select victim using FIFO

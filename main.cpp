@@ -3,6 +3,7 @@
 #include "map.h"
 
 queue<int> freeq;
+list<int> lba_list;
 STATS* stats;
 char RPOLICY = 0; //0: fifo
 char* workload;
