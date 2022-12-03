@@ -7,6 +7,8 @@ extern uint32_t target_ppa;
 extern queue<int> freeq;
 extern list<int> lba_list;
 
+int cmp = 0;
+
 /*check mapping table hit
  * if miss, do replacement (or load)
  */
@@ -34,6 +36,12 @@ int check_mtable(uint32_t lba, SSD* ssd, STATS* stats) {
 				update_lba_list(lba, ssd, stats);
 			}else{
 				entry_index = m_lru(lba, ssd, stats);
+				if (entry_index != cmp){
+				printf("%d != %d\n", cmp, entry_index);
+				}
+				cmp += 1;
+				if (cmp >= ssd->mtable_size) cmp = cmp -838;
+	//			printf("entry_index: %d with list size: %d\n", entry_index, lba_list.size());
 			}
 			//TODO ADD REPLACEMENT POLICY
 		}
@@ -60,6 +68,11 @@ uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats){ // LRU, update l
 	list<int>::iterator it;
 	bool find_flag = false;
 	if((uint32_t) lba_list.size() < ssd->mtable_size){
+		it = find(lba_list.begin(), lba_list.end(), lba);
+		if (it != lba_list.end()){
+			lba_list.erase(it);
+			printf("find lba\n");
+		}
 		lba_list.push_front(lba);
 	}else{
 		victim_lba = lba_list.back();
@@ -67,15 +80,12 @@ uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats){ // LRU, update l
 		if(victim_lba == lba){
 			lba_list.push_front(lba);
 		}else{
-			for(it = lba_list.begin(); it != lba_list.end(); ++it){
-			//	printf("lba %d is same with lba_list[i], %d\n", lba, *it);	
-				if(*it == (int) lba){
-					printf("lba %d in lba_list\n", *it);
-					lba_list.erase(it);
-					lba_list.push_front(lba);
-					find_flag = true;
-					break;
-				}
+			it = find(lba_list.begin(), lba_list.end(), lba);
+			if (it != lba_list.end()){
+				lba_list.erase(it);
+				lba_list.push_front(lba);
+				find_flag = true;
+				printf("find lba\n");
 			}
 			if(!find_flag){
 				lba_list.push_front(lba);
@@ -99,6 +109,9 @@ int m_lru(uint32_t lba, SSD* ssd, STATS* stats){
 			}
 			break;
 		}
+	}
+	if (enindex == -1){
+		printf("somting is wrong in LRU!!!!\n");
 	}
 	ssd->mtable[enindex].dirty = false;
 	ssd->mtable[enindex].ppa = UINT_MAX;

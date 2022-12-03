@@ -5,7 +5,7 @@
 queue<int> freeq;
 list<int> lba_list;
 STATS* stats;
-char RPOLICY = 0; //0: fifo
+char RPOLICY = 1; //0: fifo, 1: LRU
 char* workload;
 
 void ssd_init(SSD* ssd, STATS* stats) {
