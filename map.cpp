@@ -31,13 +31,13 @@ int check_mtable(uint32_t lba, SSD* ssd, STATS* stats) {
 		if (RPOLICY == 0) {
 			entry_index = m_fifo(lba, ssd, stats);
 		} else if (RPOLICY == 1) {
-			if ((uint32_t) lba_list.size() < ssd->mtable_size){	//Do not need to replacement
+			if ((int) lba_list.size() < ssd->mtable_size){	//Do not need to replacement
 				entry_index = m_fifo(lba, ssd, stats);
-				update_lba_list(lba, ssd, stats);
+				update_lba_list(lba, ssd, stats, true);
 			}else{
 				entry_index = m_lru(lba, ssd, stats);
 				if (entry_index != cmp){
-				printf("%d != %d\n", cmp, entry_index);
+				//printf("%d != %d\n", cmp, entry_index);
 				}
 				cmp += 1;
 				if (cmp >= ssd->mtable_size) cmp = cmp -838;
@@ -52,6 +52,9 @@ int check_mtable(uint32_t lba, SSD* ssd, STATS* stats) {
 		/*cache hit
 		 */
 		stats->cache_hit++;
+		if (RPOLICY == 1){
+			update_lba_list(lba, ssd, stats, false);
+		}
 	}
 
 	return entry_index;
@@ -63,20 +66,22 @@ int update_mtable(int index, uint32_t ppa, SSD* ssd) {
 	return 0;
 }
 
-uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats){ // LRU, update lba-Linked list for finding lru-lba as victim
+uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats, bool ismiss){ // LRU, update lba-Linked list for finding lru-lba as victim
 	uint32_t victim_lba = -1;
 	list<int>::iterator it;
 	bool find_flag = false;
-	if((uint32_t) lba_list.size() < ssd->mtable_size){
+	if((int) lba_list.size() < ssd->mtable_size){
 		it = find(lba_list.begin(), lba_list.end(), lba);
 		if (it != lba_list.end()){
 			lba_list.erase(it);
-			printf("find lba\n");
+	//		printf("find lba\n");
 		}
 		lba_list.push_front(lba);
 	}else{
-		victim_lba = lba_list.back();
-		lba_list.pop_back();
+		if (ismiss){
+			victim_lba = lba_list.back();
+			lba_list.pop_back();
+		}
 		if(victim_lba == lba){
 			lba_list.push_front(lba);
 		}else{
@@ -85,7 +90,7 @@ uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats){ // LRU, update l
 				lba_list.erase(it);
 				lba_list.push_front(lba);
 				find_flag = true;
-				printf("find lba\n");
+	//			printf("find lba\n");
 			}
 			if(!find_flag){
 				lba_list.push_front(lba);
@@ -97,11 +102,11 @@ uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats){ // LRU, update l
 
 int m_lru(uint32_t lba, SSD* ssd, STATS* stats){
 	//TODO. Apply Hashing, too!
-	int victim_lba = update_lba_list(lba, ssd, stats);
+	int victim_lba = update_lba_list(lba, ssd, stats, true);
 //	printf("victim_lba: %lld\n");
 	int enindex = -1;
 	for (int i=0;i<ssd->mtable_size; i++) {
-		if ((uint32_t) ssd->mtable[i].lba == victim_lba) {
+		if ((int) ssd->mtable[i].lba == victim_lba) {
 			enindex = i;
 			if(ssd->mtable[i].dirty == true){
 				ssd->fmtable[ssd->mtable[i].lba] = ssd->mtable[enindex].ppa;
@@ -111,7 +116,7 @@ int m_lru(uint32_t lba, SSD* ssd, STATS* stats){
 		}
 	}
 	if (enindex == -1){
-		printf("somting is wrong in LRU!!!!\n");
+		printf("someting is wrong in LRU!!!! victim lba: %d\n", victim_lba);
 	}
 	ssd->mtable[enindex].dirty = false;
 	ssd->mtable[enindex].ppa = UINT_MAX;
