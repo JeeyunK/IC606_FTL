@@ -1,4 +1,10 @@
+#include <cassert>
+#include <fcntl.h>
 #include <signal.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include "settings.h"
 #include "map.h"
 
@@ -6,6 +12,21 @@ queue<int> freeq;
 STATS* stats;
 char RPOLICY = 0; //0: fifo
 char* workload;
+
+static off_t fdlength(int fd)
+{
+	struct stat st;
+	off_t cur, ret;
+
+	if (!fstat(fd, &st) && S_ISREG(st.st_mode))
+		return st.st_size;
+
+	cur = lseek(fd, 0, SEEK_CUR);
+	ret = lseek(fd, 0, SEEK_END);
+	lseek(fd, cur, SEEK_SET);
+
+	return ret;
+}
 
 void ssd_init(SSD* ssd, STATS* stats) {
 	ssd->itable = (bool*)calloc(NOP, sizeof(bool));
@@ -47,27 +68,6 @@ void ssd_init(SSD* ssd, STATS* stats) {
 	
 	printf("* Device size: %.2f GB \n", (double)DEVSIZE/G);
 	printf("* Logical size: %.2f GB\n", (double)LOGSIZE/G);
-}
-
-long get_workloadline(char *workload) {
-	string data;
-	char cmd_char[128] = "wc -l ";
-	strcat(cmd_char, workload);
-	string cmd = cmd_char;
-	FILE *stream;
-	const int max_buffer = 256;
-	char buffer[max_buffer];
-	cmd.append(" 2>&1");
-
-	stream = popen(cmd.c_str(), "r");
-
-	if (stream) {
-		while (!feof(stream)) {
-			if (fgets(buffer, max_buffer, stream) != NULL) data.append(buffer);
-		}
-		pclose(stream);
-	}
-	return stol(data);
 }
 
 void simul_info(SSD *ssd, STATS *stats, int progress) {
@@ -112,28 +112,48 @@ void req_processing(char *raw_req, user_request *req) {
 /*processing trace file
  */
 void ssd_simulation( SSD *ssd, STATS *stats, char* workload) {
-	char raw_req[128];
-	char load_mark[128] = "LOAD_END\n";
-	user_request *ureq = (user_request*)malloc(sizeof(user_request));
-	FILE *wktrace = fopen(workload, "r");
-	
+	int readfd;
+	char *buf;
+	long cur, read_len;
+	//char load_mark[128] = "LOAD_END\n"; // Not supported yet
+	user_request *ureq;
+
+	readfd = open(workload, O_RDONLY);
+	if (readfd < 0) {
+		perror("Failed to open read file");
+		exit(1);
+	}
+
+	read_len = fdlength(readfd);
+	buf = (char*)mmap(NULL, read_len, PROT_READ, MAP_SHARED, readfd, 0);
+	if (buf == MAP_FAILED) {
+		perror("Failed to mmap read file");
+		exit(1);
+	}
+	close(readfd);
+
+	madvise(buf, read_len, MADV_SEQUENTIAL | MADV_WILLNEED);
+
+	stats->tot_req = *(long*)buf;
+	cur = sizeof(long);
+
 	int progress=0;
-	while (fgets(raw_req, 128, wktrace)) {
-		if (!strcmp(raw_req, load_mark)) {
-			stats->tot_req -= 1;
-			continue;
-		}
+	while (cur < read_len) {
+		ureq = (user_request*)(buf + cur);
+		assert(0 <= ureq->op && ureq->op <= 3);
+
+		cur += sizeof(user_request);
+
 		stats->cur_req++;
 		if (stats->write%262144==0) printf("\rwrite size: %lldGB    ", stats->write/262144);
 		if ((stats->cur_req%(stats->tot_req/50))==0) {
 			progress += 2;
 			simul_info(ssd, stats, progress);
 		}
-		req_processing(raw_req, ureq);
 		submit_io(ssd, stats, ureq);
-
 	}
 
+	munmap(buf, read_len);
 }
 
 int main(int argc, char **argv) {
@@ -160,8 +180,7 @@ int main(int argc, char **argv) {
 	ssd->mtable_size = (int)LBANUM/ssd->mtable_size;
 	printf(" (size: %d)\n", ssd->mtable_size);
 	ssd_init(ssd, stats);
-	stats->tot_req = get_workloadline(workload);
-	printf("* Workload line number: %llu\n", stats->tot_req);
+
 	printf("SSD initialization complete\n");
 	printf("**********************\n");
 	
