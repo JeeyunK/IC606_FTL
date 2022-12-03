@@ -29,7 +29,12 @@ int check_mtable(uint32_t lba, SSD* ssd, STATS* stats) {
 		if (RPOLICY == 0) {
 			entry_index = m_fifo(lba, ssd, stats);
 		} else if (RPOLICY == 1) {
-			entry_index = m_lru(lba, ssd, stats);
+			if ((uint32_t) lba_list.size() < ssd->mtable_size){	//Do not need to replacement
+				entry_index = m_fifo(lba, ssd, stats);
+				update_lba_list(lba, ssd, stats);
+			}else{
+				entry_index = m_lru(lba, ssd, stats);
+			}
 			//TODO ADD REPLACEMENT POLICY
 		}
 		//TODO add flash access latency
@@ -51,9 +56,10 @@ int update_mtable(int index, uint32_t ppa, SSD* ssd) {
 }
 
 uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats){ // LRU, update lba-Linked list for finding lru-lba as victim
-	uint32_t victim_lba;
+	uint32_t victim_lba = -1;
 	list<int>::iterator it;
-	if(lba_list.size() == 0){
+	bool find_flag = false;
+	if((uint32_t) lba_list.size() < ssd->mtable_size){
 		lba_list.push_front(lba);
 	}else{
 		victim_lba = lba_list.back();
@@ -62,11 +68,17 @@ uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats){ // LRU, update l
 			lba_list.push_front(lba);
 		}else{
 			for(it = lba_list.begin(); it != lba_list.end(); ++it){
+			//	printf("lba %d is same with lba_list[i], %d\n", lba, *it);	
 				if(*it == (int) lba){
+					printf("lba %d in lba_list\n", *it);
 					lba_list.erase(it);
 					lba_list.push_front(lba);
+					find_flag = true;
 					break;
 				}
+			}
+			if(!find_flag){
+				lba_list.push_front(lba);
 			}	
 		}
 	}
@@ -76,22 +88,23 @@ uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats){ // LRU, update l
 int m_lru(uint32_t lba, SSD* ssd, STATS* stats){
 	//TODO. Apply Hashing, too!
 	int victim_lba = update_lba_list(lba, ssd, stats);
-	int entry_index = -1;
+//	printf("victim_lba: %lld\n");
+	int enindex = -1;
 	for (int i=0;i<ssd->mtable_size; i++) {
 		if ((uint32_t) ssd->mtable[i].lba == victim_lba) {
-			entry_index = i;
+			enindex = i;
 			if(ssd->mtable[i].dirty == true){
-				ssd->fmtable[ssd->mtable[i].lba] = ssd->mtable[entry_index].ppa;
+				ssd->fmtable[ssd->mtable[i].lba] = ssd->mtable[enindex].ppa;
 				stats->writeback++;
 			}
 			break;
 		}
 	}
-	ssd->mtable[entry_index].dirty = false;
-	ssd->mtable[entry_index].ppa = UINT_MAX;
-	ssd->mtable[entry_index].lba = UINT_MAX;
-	//if (entry_index == (ssd->mtable_size)) entry_index = 0;
-	return entry_index;
+	ssd->mtable[enindex].dirty = false;
+	ssd->mtable[enindex].ppa = UINT_MAX;
+	ssd->mtable[enindex].lba = UINT_MAX;
+	//if (enindex == (ssd->mtable_size)) enindex = 0;
+	return enindex;
 }
 
 /* select victim using FIFO
@@ -115,6 +128,7 @@ int m_fifo(uint32_t lba, SSD* ssd, STATS* stats) {
 
 void read(uint32_t lba, SSD *ssd, STATS* stats) {
 	stats->read++;
+	//update_lba_list(lba, ssd, stats);
 	int mindex = check_mtable(lba, ssd, stats);
 	uint32_t ppa = ssd->mtable[mindex].ppa;
 	if (ppa == UINT_MAX) {
@@ -129,6 +143,7 @@ void read(uint32_t lba, SSD *ssd, STATS* stats) {
 
 void write(uint32_t lba, SSD* ssd, STATS* stats) {
 	stats->write++;
+	//update_lba_list(lba, ssd, stats);
 	int mindex = check_mtable(lba, ssd, stats);
 	uint32_t ppa = ssd->mtable[mindex].ppa;
 	if (ppa == target_ppa) printf("prev ppa is %u, lba: %u\n", target_ppa, lba);
