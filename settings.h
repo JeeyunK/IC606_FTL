@@ -6,9 +6,11 @@
 #include <stdio.h>
 #include <climits>
 #include <queue>
+#include <list>
 #include <string>
 #include <cstring>
 #include <iostream>
+#include <algorithm>
 
 #define K (1024)
 #define M (1024*K)
