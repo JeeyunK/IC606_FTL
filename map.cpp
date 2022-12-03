@@ -2,13 +2,6 @@
 #include "map.h"
 #include "gc.h"
 
-#define XXH_INLINE_ALL
-#define XXH_NO_STREAM
-#include "xxhash/xxhash.h"
-#if (XXH_VECTOR != XXH_AVX512) && (XXH_VECTOR != XXH_AVX2)
-#error "Hash is not using x86 AVX"
-#endif
-
 extern char RPOLICY;
 extern uint32_t target_ppa;
 extern queue<int> freeq;
@@ -17,13 +10,16 @@ extern queue<int> freeq;
  * if miss, do replacement (or load)
  */
 int check_mtable(uint32_t lba, SSD* ssd, STATS* stats) {
-	long entry_index;
-
+	int entry_index=-1;
 	/* check cached mapping table
 	 */
-	entry_index = XXH3_64bits(&lba, sizeof(lba)) % ssd->mtable_size;
-
-	if (ssd->mtable[entry_index].lba != lba) {
+	for (int i=0;i<ssd->mtable_size; i++) {
+		if (ssd->mtable[i].lba == lba) {
+			entry_index = i;
+			break;
+		}
+	}
+	if (entry_index == -1) {
 		/* need replacement
 		 */
 		stats->cache_miss++;
@@ -54,13 +50,8 @@ int update_mtable(int index, uint32_t ppa, SSD* ssd) {
 
 /* select victim using FIFO
  */
-long m_fifo(uint32_t lba, SSD* ssd, STATS* stats) {
-	static long findex;
-
-	long findex = XXH3_64bits(&__findex, sizeof(__findex));
-
-	if (ssd->__mtable[findex
-
+int findex=0;
+int m_fifo(uint32_t lba, SSD* ssd, STATS* stats) {
 	if (ssd->mtable[findex].dirty == true) {
 		//writeback dirty data
 		//TODO scaling time value when accessing fmtable
@@ -70,11 +61,10 @@ long m_fifo(uint32_t lba, SSD* ssd, STATS* stats) {
 	ssd->mtable[findex].dirty = false;
 	ssd->mtable[findex].ppa = UINT_MAX;
 	ssd->mtable[findex].lba = UINT_MAX;
-
-	__findex++;
-	if (__findex == (ssd->mtable_size)) __findex = 0;
-
-	return findex;
+	int ret = findex;
+	findex++;
+	if (findex == (ssd->mtable_size)) findex = 0;
+	return ret;
 }
 
 void read(uint32_t lba, SSD *ssd, STATS* stats) {
