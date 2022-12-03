@@ -11,11 +11,13 @@ void ssd_init(SSD* ssd, STATS* stats) {
 	ssd->itable = (bool*)calloc(NOP, sizeof(bool));
 	ssd->oob = (OOB*)calloc(NOP, sizeof(OOB));
 	ssd->mtable = (m_unit*)malloc(sizeof(m_unit)*ssd->mtable_size);
+	ssd->__mtable = (uint32_t*)malloc(sizeof(uint32_t)*ssd->mtable_size);
 	ssd->fmtable = (uint32_t*)malloc(sizeof(uint32_t)*LBANUM);
 	for (int i=0;i<ssd->mtable_size;i++) {
 		ssd->mtable[i].lba = UINT_MAX;
 		ssd->mtable[i].ppa = UINT_MAX;
 		ssd->mtable[i].dirty = false;
+		ssd->__mtable[i] = UINT_MAX;
 	}
 	for (int i=0;i<LBANUM;i++) {
 		ssd->fmtable[i] = UINT_MAX;

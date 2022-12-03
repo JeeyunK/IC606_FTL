@@ -1,5 +1,5 @@
 CC= g++
-CFLAGS = -g -O3 -flto=8 -march=native -mtune=native -fpermissive -Wall
+CFLAGS = -g -O3 -mavx2 -flto=8 -march=native -mtune=native -fpermissive -Wall
 #CFLAGS = -g -fsanitize=address -static-libasan -fpermissive
 OBJS = main.o map.o gc.o
 TARGET = simul
