@@ -11,8 +11,8 @@
 queue<int> freeq;
 list<int> lba_list;
 STATS* stats;
-int RPOLICY; //0: FIFO, 1: LRU, 2: Clock-based NRU
-char* cRPOLICY; //0: FIFO, 1: LRU, 2: Clock-based NRU
+int RPOLICY; //0: FIFO, 1: LRU, 2: Clock-based NRU, 3: Random
+char* cRPOLICY;
 char* workload;
 
 static off_t fdlength(int fd)
@@ -168,7 +168,7 @@ int main(int argc, char **argv) {
 	stats = (STATS*)malloc(sizeof(STATS));
 
 	if (argc < 2) {
-		printf("./simulation <workload> <FIFO/LRU/cNRU> <mapping table size ratio>\n");
+		printf("./simulation <workload> <FIFO/LRU/cNRU/random> <mapping table size ratio>\n");
 		abort();
 	}
 	workload = argv[1];
@@ -177,6 +177,7 @@ int main(int argc, char **argv) {
 	if(strcmp(cRPOLICY, "FIFO")==0)	RPOLICY = 0;
 	else if(strcmp(cRPOLICY, "LRU")==0)	RPOLICY = 1;
 	else if(strcmp(cRPOLICY, "cNRU")==0)	RPOLICY = 2;
+	else if(strcmp(cRPOLICY, "random")==0)	RPOLICY = 3;
 
 	setbuf(stdout, NULL);
 	setbuf(stderr, NULL);

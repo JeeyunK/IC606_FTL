@@ -7,6 +7,7 @@ extern uint32_t target_ppa;
 extern queue<int> freeq;
 extern list<int> lba_list;
 
+int counter = 0;
 
 /*check mapping table hit
  * if miss, do replacement (or load)
@@ -30,17 +31,24 @@ int check_mtable(uint32_t lba, SSD* ssd, STATS* stats) {
 		stats->cache_miss++;
 		/*select replacement policy
 	/	 */
-		if (RPOLICY == 0) {
+		if (RPOLICY == 0) { //FIFO
 			entry_index = m_fifo(lba, ssd, stats);
-		} else if (RPOLICY == 1) {
+		} else if (RPOLICY == 1) {  //LRU
 			if ((int) lba_list.size() < ssd->mtable_size){	//Do not need to replacement
 				entry_index = m_fifo(lba, ssd, stats);
 				update_lba_list(lba, ssd, stats, true);
 			}else{
 				entry_index = m_lru(lba, ssd, stats);
 			}
-		} else if (RPOLICY == 2){
+		} else if (RPOLICY == 2){  //cNRU
 			entry_index = m_cnru(lba, ssd, stats);
+		} else if (RPOLICY == 3){
+			counter ++ ; // For checking m_table is full. If it isn't, we don't need replacement. (Using fifo for adding elements)
+			if(counter <= ssd->mtable_size){
+				entry_index = m_fifo(lba, ssd, stats);
+			}else{
+				entry_index = m_rand(lba, ssd, stats);
+			}
 		}
 		//TODO add flash access latency
 		ssd->lkuptable[lba] = entry_index;
@@ -157,6 +165,19 @@ int m_fifo(uint32_t lba, SSD* ssd, STATS* stats) {
 	return ret;
 }
 
+int m_rand(uint32_t lba, SSD* ssd, STATS* stats){
+	int rindex =  rand()%(ssd->mtable_size);
+	if(ssd->mtable[rindex].dirty == true){
+		ssd->fmtable[ssd->mtable[rindex].lba] = ssd->mtable[rindex].ppa;
+		stats->writeback++;
+	}
+	if (ssd->mtable[rindex].lba != UINT_MAX) ssd->lkuptable[ssd->mtable[rindex].lba] = -1;
+	ssd->mtable[rindex].dirty = false;
+	ssd->mtable[rindex].ppa = UINT_MAX;
+	ssd->mtable[rindex].lba = UINT_MAX;
+	ssd->mtable[rindex].recently_used = false;
+	return rindex;
+}
 int n_findex=0;
 int m_cnru(uint32_t lba, SSD* ssd, STATS* stats) {
 	int ret;

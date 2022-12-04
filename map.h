@@ -4,6 +4,7 @@ uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats, bool ismiss);
 int m_lru(uint32_t lba, SSD* ssd, STATS* stats);
 int m_fifo(uint32_t lba, SSD* ssd, STATS* stats);
 int m_cnru(uint32_t lba, SSD* ssd, STATS* stats);
+int m_rand(uint32_t lba, SSD* ssd, STATS* stats);
 
 void read(uint32_t lba, SSD* ssd, STATS* stats);
 void write(uint32_t lba, SSD* ssd, STATS* stats);
