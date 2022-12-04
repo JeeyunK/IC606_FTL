@@ -2,7 +2,7 @@
 #include "map.h"
 #include "gc.h"
 
-extern char RPOLICY;
+extern int RPOLICY;
 extern uint32_t target_ppa;
 extern queue<int> freeq;
 extern list<int> lba_list;
@@ -44,10 +44,13 @@ int check_mtable(uint32_t lba, SSD* ssd, STATS* stats) {
 	//			printf("entry_index: %d with list size: %d\n", entry_index, lba_list.size());
 			}
 			//TODO ADD REPLACEMENT POLICY
+		} else if (RPOLICY == 2){
+			entry_index = m_cnru(lba, ssd, stats);
 		}
 		//TODO add flash access latency
 		ssd->mtable[entry_index].lba = lba;
 		ssd->mtable[entry_index].ppa = ssd->fmtable[lba];
+		ssd->mtable[entry_index].recently_used = true;
 	} else {
 		/*cache hit
 		 */
@@ -63,6 +66,7 @@ int check_mtable(uint32_t lba, SSD* ssd, STATS* stats) {
 int update_mtable(int index, uint32_t ppa, SSD* ssd) {
 	ssd->mtable[index].ppa = ppa;
 	ssd->mtable[index].dirty = true;
+	ssd->mtable[index].recently_used = true;
 	return 0;
 }
 
@@ -141,6 +145,34 @@ int m_fifo(uint32_t lba, SSD* ssd, STATS* stats) {
 	int ret = findex;
 	findex++;
 	if (findex == (ssd->mtable_size)) findex = 0;
+	return ret;
+}
+
+int n_findex=0;
+int m_cnru(uint32_t lba, SSD* ssd, STATS* stats) {
+	int ret;
+	while(1){
+		if(ssd->mtable[n_findex].recently_used == true){
+			ssd->mtable[n_findex].recently_used = false;
+			n_findex++;
+			if (n_findex == (ssd->mtable_size)) n_findex = 0;
+		}else{
+			if (ssd->mtable[n_findex].dirty == true) {
+			//writeback dirty data
+			//TODO scaling time value when accessing fmtable
+				ssd->fmtable[ssd->mtable[n_findex].lba] = ssd->mtable[n_findex].ppa;
+				stats->writeback++;
+			}
+			ssd->mtable[n_findex].dirty = false;
+			ssd->mtable[n_findex].ppa = UINT_MAX;
+			ssd->mtable[n_findex].lba = UINT_MAX;
+			ssd->mtable[n_findex].recently_used = false;
+			ret = n_findex;
+			n_findex++;
+			if (n_findex == (ssd->mtable_size)) n_findex = 0;
+			break;
+		}
+	}
 	return ret;
 }
 

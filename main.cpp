@@ -11,7 +11,8 @@
 queue<int> freeq;
 list<int> lba_list;
 STATS* stats;
-char RPOLICY = 1; //0: fifo, 1: LRU
+int RPOLICY; //0: FIFO, 1: LRU, 2: Clock-based NRU
+char* cRPOLICY; //0: FIFO, 1: LRU, 2: Clock-based NRU
 char* workload;
 
 static off_t fdlength(int fd)
@@ -38,6 +39,7 @@ void ssd_init(SSD* ssd, STATS* stats) {
 		ssd->mtable[i].lba = UINT_MAX;
 		ssd->mtable[i].ppa = UINT_MAX;
 		ssd->mtable[i].dirty = false;
+		ssd->mtable[i].recently_used = false;
 	}
 	for (int i=0;i<LBANUM;i++) {
 		ssd->fmtable[i] = UINT_MAX;
@@ -82,7 +84,7 @@ void simul_info(SSD *ssd, STATS *stats, int progress) {
 
 void display_result(STATS* stats) {
 	printf("\n=======================================================\n");
-	printf("Experimental result [ %s ]\n\n", RPOLICY? "test":"FIFO");
+	printf("Experimental result [ %s ]\n\n", cRPOLICY);
 	printf("(workload: %s)\n", workload);
 	printf("* # of request : %llu / %llu\n", stats->cur_req, stats->tot_req);
 	printf("* USER WRITE count : %llu\n", stats->write);
@@ -163,10 +165,15 @@ int main(int argc, char **argv) {
 	stats = (STATS*)malloc(sizeof(STATS));
 
 	if (argc < 2) {
-		printf("./simulation <workload> <mapping table size ratio>\n");
+		printf("./simulation <workload> <FIFO/LRU/cNRU> <mapping table size ratio>\n");
 		abort();
 	}
 	workload = argv[1];
+	cRPOLICY = argv[2];
+	
+	if(strcmp(cRPOLICY, "FIFO"))	RPOLICY = 1;
+	else if(strcmp(cRPOLICY, "LRU"))	RPOLICY = 2;
+	else if(strcmp(cRPOLICY, "cNRU"))	RPOLICY = 3;
 
 	setbuf(stdout, NULL);
 	setbuf(stderr, NULL);
@@ -175,7 +182,7 @@ int main(int argc, char **argv) {
 	//signal(SIGABRT, sig_handler);
 	/* initialize SSD structures
 	 */
-	ssd->mtable_size = atoi(argv[2]);
+	ssd->mtable_size = atoi(argv[3]);
 	printf("***SIMULATION SETUP***\n");
 	printf("* Workload: %s\n* Mapping table size ratio: %d", workload, ssd->mtable_size);
 	ssd->mtable_size = (int)LBANUM/ssd->mtable_size;

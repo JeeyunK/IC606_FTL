@@ -11,6 +11,8 @@
 #include <cstring>
 #include <iostream>
 #include <algorithm>
+#include <unistd.h>
+#include <sys/types.h>
 
 #define K (1024)
 #define M (1024*K)
@@ -34,6 +36,7 @@ typedef struct mapping_unit{
 	uint32_t lba;
 	uint32_t ppa;
 	bool dirty;
+	bool recently_used;
 }m_unit;
 
 typedef struct user_request{
