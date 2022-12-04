@@ -58,6 +58,7 @@ typedef struct SSD {
         bool *itable; //valid table, valid=1
         int mtable_size; //mapping table size ratio (flash/memory)
         m_unit *mtable; // mapping table in memory
+        uint32_t *lkuptable; // lookup table for searching LBA fast! (index: lba, element: index of mtable);
         uint32_t *fmtable; // mapping table in flash device
         int *ictable; //invalid page count per block
 	BLOCK active;

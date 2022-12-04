@@ -34,15 +34,18 @@ void ssd_init(SSD* ssd, STATS* stats) {
 	ssd->itable = (bool*)calloc(NOP, sizeof(bool));
 	ssd->oob = (OOB*)calloc(NOP, sizeof(OOB));
 	ssd->mtable = (m_unit*)malloc(sizeof(m_unit)*ssd->mtable_size);
+	ssd->lkuptable = (uint32_t*)malloc(sizeof(uint32_t)*LBANUM);
 	ssd->fmtable = (uint32_t*)malloc(sizeof(uint32_t)*LBANUM);
 	for (int i=0;i<ssd->mtable_size;i++) {
 		ssd->mtable[i].lba = UINT_MAX;
 		ssd->mtable[i].ppa = UINT_MAX;
 		ssd->mtable[i].dirty = false;
 		ssd->mtable[i].recently_used = false;
+
 	}
 	for (int i=0;i<LBANUM;i++) {
 		ssd->fmtable[i] = UINT_MAX;
+		ssd->lkuptable[i] = -1;
 	}
 	ssd->ictable = (int*)calloc(NOB, sizeof(int));
 
@@ -171,9 +174,9 @@ int main(int argc, char **argv) {
 	workload = argv[1];
 	cRPOLICY = argv[2];
 	
-	if(strcmp(cRPOLICY, "FIFO"))	RPOLICY = 1;
-	else if(strcmp(cRPOLICY, "LRU"))	RPOLICY = 2;
-	else if(strcmp(cRPOLICY, "cNRU"))	RPOLICY = 3;
+	if(strcmp(cRPOLICY, "FIFO")==0)	RPOLICY = 0;
+	else if(strcmp(cRPOLICY, "LRU")==0)	RPOLICY = 1;
+	else if(strcmp(cRPOLICY, "cNRU")==0)	RPOLICY = 2;
 
 	setbuf(stdout, NULL);
 	setbuf(stderr, NULL);
@@ -184,6 +187,7 @@ int main(int argc, char **argv) {
 	 */
 	ssd->mtable_size = atoi(argv[3]);
 	printf("***SIMULATION SETUP***\n");
+	printf("* Victim Selection Policy: %s\n", cRPOLICY);
 	printf("* Workload: %s\n* Mapping table size ratio: %d", workload, ssd->mtable_size);
 	ssd->mtable_size = (int)LBANUM/ssd->mtable_size;
 	printf(" (size: %d)\n", ssd->mtable_size);

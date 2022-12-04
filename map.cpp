@@ -7,7 +7,6 @@ extern uint32_t target_ppa;
 extern queue<int> freeq;
 extern list<int> lba_list;
 
-int cmp = 0;
 
 /*check mapping table hit
  * if miss, do replacement (or load)
@@ -16,12 +15,15 @@ int check_mtable(uint32_t lba, SSD* ssd, STATS* stats) {
 	int entry_index=-1;
 	/* check cached mapping table
 	 */
+
+	entry_index = ssd->lkuptable[lba];
+	/*
 	for (int i=0;i<ssd->mtable_size; i++) {
 		if (ssd->mtable[i].lba == lba) {
 			entry_index = i;
 			break;
 		}
-	}
+	}*/
 	if (entry_index == -1) {
 		/* need replacement
 		 */
@@ -36,18 +38,12 @@ int check_mtable(uint32_t lba, SSD* ssd, STATS* stats) {
 				update_lba_list(lba, ssd, stats, true);
 			}else{
 				entry_index = m_lru(lba, ssd, stats);
-				if (entry_index != cmp){
-				//printf("%d != %d\n", cmp, entry_index);
-				}
-				cmp += 1;
-				if (cmp >= ssd->mtable_size) cmp = cmp -838;
-	//			printf("entry_index: %d with list size: %d\n", entry_index, lba_list.size());
 			}
-			//TODO ADD REPLACEMENT POLICY
 		} else if (RPOLICY == 2){
 			entry_index = m_cnru(lba, ssd, stats);
 		}
 		//TODO add flash access latency
+		ssd->lkuptable[lba] = entry_index;
 		ssd->mtable[entry_index].lba = lba;
 		ssd->mtable[entry_index].ppa = ssd->fmtable[lba];
 		ssd->mtable[entry_index].recently_used = true;
@@ -57,6 +53,9 @@ int check_mtable(uint32_t lba, SSD* ssd, STATS* stats) {
 		stats->cache_hit++;
 		if (RPOLICY == 1){
 			update_lba_list(lba, ssd, stats, false);
+		}
+		else if (RPOLICY == 2){
+			ssd->mtable[entry_index].recently_used = true;
 		}
 	}
 
@@ -109,6 +108,7 @@ int m_lru(uint32_t lba, SSD* ssd, STATS* stats){
 	int victim_lba = update_lba_list(lba, ssd, stats, true);
 //	printf("victim_lba: %lld\n");
 	int enindex = -1;
+	/*
 	for (int i=0;i<ssd->mtable_size; i++) {
 		if ((int) ssd->mtable[i].lba == victim_lba) {
 			enindex = i;
@@ -118,10 +118,18 @@ int m_lru(uint32_t lba, SSD* ssd, STATS* stats){
 			}
 			break;
 		}
+	}*/
+
+	enindex = ssd->lkuptable[victim_lba];
+	if (enindex != -1){
+		if(ssd->mtable[enindex].dirty == true){
+			ssd->fmtable[ssd->mtable[enindex].lba] = ssd->mtable[enindex].ppa;
+			stats->writeback++;
+		}
+	}else if(enindex == -1){
+		//printf("someting is wrong in LRU!!!! victim lba: %d\n", victim_lba);
 	}
-	if (enindex == -1){
-		printf("someting is wrong in LRU!!!! victim lba: %d\n", victim_lba);
-	}
+	if(ssd->mtable[enindex].lba != UINT_MAX)	ssd->lkuptable[ssd->mtable[enindex].lba] = -1;
 	ssd->mtable[enindex].dirty = false;
 	ssd->mtable[enindex].ppa = UINT_MAX;
 	ssd->mtable[enindex].lba = UINT_MAX;
@@ -139,6 +147,7 @@ int m_fifo(uint32_t lba, SSD* ssd, STATS* stats) {
 		ssd->fmtable[ssd->mtable[findex].lba] = ssd->mtable[findex].ppa;
 		stats->writeback++;
 	}
+	if(ssd->mtable[findex].lba != UINT_MAX)	ssd->lkuptable[ssd->mtable[findex].lba] = -1;
 	ssd->mtable[findex].dirty = false;
 	ssd->mtable[findex].ppa = UINT_MAX;
 	ssd->mtable[findex].lba = UINT_MAX;
@@ -163,6 +172,7 @@ int m_cnru(uint32_t lba, SSD* ssd, STATS* stats) {
 				ssd->fmtable[ssd->mtable[n_findex].lba] = ssd->mtable[n_findex].ppa;
 				stats->writeback++;
 			}
+			if (ssd->mtable[n_findex].lba != UINT_MAX) ssd->lkuptable[ssd->mtable[n_findex].lba] = -1;
 			ssd->mtable[n_findex].dirty = false;
 			ssd->mtable[n_findex].ppa = UINT_MAX;
 			ssd->mtable[n_findex].lba = UINT_MAX;
