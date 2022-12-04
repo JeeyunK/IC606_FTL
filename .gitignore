@@ -1,5 +1,6 @@
 #execution files
-simul
+/simul
+/parse
 
 # Prerequisites
 *.d
@@ -54,3 +55,5 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+*.bin
