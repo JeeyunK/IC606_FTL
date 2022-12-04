@@ -98,6 +98,7 @@ void display_result(STATS* stats) {
 	printf("* # of writeback : %llu\n", stats->writeback);
 	printf("* # of cache miss : %llu\n", stats->cache_miss);
 	printf("* # of cache hit : %llu\n", stats->cache_hit);
+	printf("* Cache hit ratio : %.3f%%\n", 100*(double)(stats->cache_hit)/(double)(stats->cache_miss+stats->cache_hit));
 	printf("=======================================================\n");
 }
 
