@@ -206,6 +206,7 @@ int main(int argc, char **argv) {
 	if (BIP) printf("* Victim Insertion Policy: BIP\n");
 	printf("* Workload: %s\n* Mapping table size ratio: %d", workload, ssd->mtable_size);
 	ssd->mtable_size = (int)LBANUM/ssd->mtable_size;
+	ssd->mtable_free = ssd->mtable_size;
 	printf(" (size: %d)\n", ssd->mtable_size);
 	ssd_init(ssd, stats);
 

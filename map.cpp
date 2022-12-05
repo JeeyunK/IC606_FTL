@@ -8,6 +8,8 @@ extern queue<int> freeq;
 extern list<int> lba_list;
 extern bool BIP;
 
+#define SKIP_FULL 1
+
 int counter = 0;
 
 /*check mapping table hit
@@ -29,7 +31,15 @@ int check_mtable(uint32_t lba, SSD* ssd, STATS* stats) {
 	if (entry_index == -1) {
 		/* need replacement
 		 */
-		stats->cache_miss++;
+		if (SKIP_FULL) {
+			if (ssd->mtable_free > 0) {
+				ssd->mtable_free--;
+			}else {
+				stats->cache_miss++;
+			}
+		} else {
+			stats->cache_miss++;
+		}
 		/*select replacement policy
 	/	 */
 		if (RPOLICY == 0) { //FIFO
