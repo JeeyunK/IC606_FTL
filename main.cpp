@@ -79,9 +79,15 @@ void simul_info(SSD *ssd, STATS *stats, int progress) {
 	printf("=====================\n");
 }
 
+struct timespec start;
+
 void display_result(STATS* stats) {
+	struct timespec end = curtime();
+
 	printf("\n=======================================================\n");
-	printf("Experimental result [ %s ]\n\n", RPOLICY? "test":"FIFO");
+	printf("Experimental result [ %s ]\n", RPOLICY? "test":"FIFO");
+	printf("Took "); print_time_diff(&start, &end);
+	printf("\n");
 	printf("(workload: %s)\n", workload);
 	printf("* # of request : %llu / %llu\n", stats->cur_req, stats->tot_req);
 	printf("* USER WRITE count : %llu\n", stats->write);
@@ -136,6 +142,8 @@ void ssd_simulation( SSD *ssd, STATS *stats, char* workload) {
 
 	stats->tot_req = *(long*)buf;
 	cur = sizeof(long);
+
+	start = curtime();
 
 	int progress=0;
 	while (cur < read_len) {
