@@ -83,10 +83,12 @@ uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats, bool ismiss){ // 
 	list<int>::iterator it;
 	bool find_flag = false;
 	if((int) lba_list.size() < ssd->mtable_size){
-		it = find(lba_list.begin(), lba_list.end(), lba);
-		if (it != lba_list.end()){
-			lba_list.erase(it);
-	//		printf("find lba\n");
+		if (ismiss == false) {
+			it = find(lba_list.begin(), lba_list.end(), lba);
+			if (it != lba_list.end()){
+				lba_list.erase(it);
+	//			printf("find lba\n");
+			}
 		}
 		if (BIP && (((double)rand()/(double)RAND_MAX)< 1/32)){
 			lba_list.push_back(lba);
@@ -105,16 +107,18 @@ uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats, bool ismiss){ // 
 				lba_list.push_front(lba);
 			}
 		}else{
-			it = find(lba_list.begin(), lba_list.end(), lba);
-			if (it != lba_list.end()){
-				lba_list.erase(it);
-				if (BIP && (((double)rand()/(double)RAND_MAX)< 1/32)){
-					lba_list.push_back(lba);
-				}else{
-					lba_list.push_front(lba);
+			if (ismiss == false) {
+				it = find(lba_list.begin(), lba_list.end(), lba);
+				if (it != lba_list.end()){
+					lba_list.erase(it);
+					if (BIP && (((double)rand()/(double)RAND_MAX)< 1/32)){
+						lba_list.push_back(lba);
+					}else{
+						lba_list.push_front(lba);
+					}
+					find_flag = true;
+	//				printf("find lba\n");
 				}
-				find_flag = true;
-	//			printf("find lba\n");
 			}
 			if(!find_flag){
 				if (BIP && (((double)rand()/(double)RAND_MAX)< 1/32)){
