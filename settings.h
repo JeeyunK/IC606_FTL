@@ -74,7 +74,8 @@ typedef struct STATS {
         unsigned long long cur_req; //# of done request
         unsigned long long latency; //current latency of accessing mapping table
         unsigned long long tot_req; //# of total request
-        
+        int file_size_r;
+
 	unsigned long long write;
 	unsigned long long read;
 	unsigned long long trim;

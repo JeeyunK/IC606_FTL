@@ -149,12 +149,15 @@ void ssd_simulation( SSD *ssd, STATS *stats, char* workload) {
 	madvise(buf, read_len, MADV_SEQUENTIAL | MADV_WILLNEED);
 
 	stats->tot_req = *(long*)buf;
+	stats->tot_req = stats->tot_req/stats->file_size_r;
 	cur = sizeof(long);
 
 	start = curtime();
 
 	int progress=0;
 	while (cur < read_len) {
+		if (stats->tot_req == stats->cur_req) break;
+
 		ureq = (user_request*)(buf + cur);
 		assert(0 <= ureq->op && ureq->op <= 3);
 
@@ -178,7 +181,7 @@ int main(int argc, char **argv) {
 	stats = (STATS*)malloc(sizeof(STATS));
 
 	if (argc < 2) {
-		printf("./simulation <workload> <FIFO/LRU/cNRU/random> <mapping table size ratio>\n");
+		printf("./simulation <workload> <FIFO/LRU/cNRU/random/LRUB> <mapping table size ratio> <filesize 1/n>\n");
 		abort();
 	}
 	workload = argv[1];
@@ -205,6 +208,7 @@ int main(int argc, char **argv) {
 	/* initialize SSD structures
 	 */
 	ssd->mtable_size = atoi(argv[3]);
+	stats->file_size_r = atoi(argv[4]);
 	printf("***SIMULATION SETUP***\n");
 	printf("* Victim Selection Policy: %s\n", cRPOLICY);
 	if (BIP) printf("* Victim Insertion Policy: BIP\n");
