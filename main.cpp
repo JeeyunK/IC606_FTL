@@ -14,7 +14,7 @@ STATS* stats;
 int RPOLICY; //0: FIFO, 1: LRU, 2: Clock-based NRU, 3: Random
 char* cRPOLICY;
 char* workload;
-bool BIP = true;
+bool BIP;
 
 static off_t fdlength(int fd)
 {
@@ -186,6 +186,10 @@ int main(int argc, char **argv) {
 	
 	if(strcmp(cRPOLICY, "FIFO")==0)	RPOLICY = 0;
 	else if(strcmp(cRPOLICY, "LRU")==0)	RPOLICY = 1;
+	else if(strcmp(cRPOLICY, "LRUB")==0){
+		RPOLICY = 1;
+		BIP = true;
+	}
 	else if(strcmp(cRPOLICY, "cNRU")==0)	RPOLICY = 2;
 	else if(strcmp(cRPOLICY, "random")==0)	RPOLICY = 3;
 	else {
