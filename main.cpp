@@ -187,6 +187,10 @@ int main(int argc, char **argv) {
 	else if(strcmp(cRPOLICY, "LRU")==0)	RPOLICY = 1;
 	else if(strcmp(cRPOLICY, "cNRU")==0)	RPOLICY = 2;
 	else if(strcmp(cRPOLICY, "random")==0)	RPOLICY = 3;
+	else {
+		fprintf(stderr, "Unrecognized policy: \"%s\"\n", cRPOLICY);
+		exit(1);
+	}
 
 	setbuf(stdout, NULL);
 	setbuf(stderr, NULL);
