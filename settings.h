@@ -7,9 +7,13 @@
 #include <time.h>
 #include <climits>
 #include <queue>
+#include <list>
 #include <string>
 #include <cstring>
 #include <iostream>
+#include <algorithm>
+#include <unistd.h>
+#include <sys/types.h>
 
 #define K (1024)
 #define M (1024*K)
@@ -35,6 +39,7 @@ typedef struct mapping_unit{
 	uint32_t lba;
 	uint32_t ppa;
 	bool dirty;
+	bool recently_used;
 }m_unit;
 
 typedef struct user_request{
@@ -56,6 +61,7 @@ typedef struct SSD {
         bool *itable; //valid table, valid=1
         int mtable_size; //mapping table size ratio (flash/memory)
         m_unit *mtable; // mapping table in memory
+        uint32_t *lkuptable; // lookup table for searching LBA fast! (index: lba, element: index of mtable);
         uint32_t *fmtable; // mapping table in flash device
         int *ictable; //invalid page count per block
 	BLOCK active;

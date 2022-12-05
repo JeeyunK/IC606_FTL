@@ -9,6 +9,8 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LIBS)
 
+$(TARGET)_1: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LIBS)
 
 main.o: main.cpp settings.h map.h
 	$(CC) $(CFLAGS) -c $< -o $@

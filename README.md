@@ -3,7 +3,7 @@
 ### 실행방법
 ~~~
 make clean; make all -j
-./simul <trace_file> <cached mapping table size ratio (ex: 100)>
+./simul <trace_file> <replacement policy (FIFO/LRU/cNRU)> <cached mapping table size ratio (ex: 100)>
 ~~~
 
 trace file은 필요하면 경로 알려주거나 보내드림
