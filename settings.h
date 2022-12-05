@@ -15,7 +15,7 @@
 #define G (1024*M)
 #define T (1024L*G)
 
-#define LOGSIZE 32L*G
+#define LOGSIZE 128L*G
 #define OP 10
 #define DEVSIZE (LOGSIZE + LOGSIZE/100*OP)
 

@@ -33,7 +33,7 @@ static off_t fdlength(int fd)
 	return ret;
 }
 
-static inline long parse(const off_t read_len, const char * const buf)
+static inline long parse(const off_t read_len, const char * const buf, const bool op)
 {
 	static long cur = 0, parsed = 0;
 	long last, ret;
@@ -41,7 +41,7 @@ static inline long parse(const off_t read_len, const char * const buf)
 	bool eof;
 
 	last = cur;
-	while (!(eof = cur > read_len) && buf[cur] != ' ' && buf[cur] != '\n')
+	while (!(eof = cur > read_len) && buf[cur] != ',' && buf[cur] != '\n')
 		cur++;
 	if (eof)
 		return -1;
@@ -51,7 +51,28 @@ static inline long parse(const off_t read_len, const char * const buf)
 
 	//puts(tmp);
 	cur++;
-	ret = atol(tmp);
+	if (op) {
+		switch (tmp[0]) {
+		case 'W':
+			ret = 1;
+			break;
+		case 'R':
+			ret = 0;
+			break;
+		case 'D':
+			ret = 3;
+			break;
+		case 'F':
+			ret = -2;
+			break;
+		default:
+			fprintf(stderr, "Unrecognized op: \"%s\"\n", tmp);
+			exit(1);
+			break;
+		}
+	} else {
+		ret = atol(tmp);
+	}
 
 	if (++parsed % 10000 == 0) {
 		printf("\r%.2f%%", (float)cur * 100 / read_len);
@@ -107,11 +128,21 @@ int main(int argc, char *argv[])
 
 	// Start parsing
 	for (;;) {
-		req.op = parse(read_len, buf);
-		req.lba = parse(read_len, buf);
-		req.io_size = parse(read_len, buf);
+		req.op = parse(read_len, buf, true);
+		req.lba = parse(read_len, buf, false) / 8;
+		req.io_size = parse(read_len, buf, false);
 		if (req.op == -1)
 			break;
+		if (req.op == -2)
+			continue;
+		if (req.io_size == 0)
+			continue;
+		if (req.lba >= 128ULL * 1024 * 1024 * 1024 / 4096) {
+			printf("count: %ld, op: %d, lba: %u, size: %d is out-of-range, skipping\n", count, req.op, req.lba, req.io_size);
+			continue; // EOF
+		}
+
+//		req.lba %= 32LL * 1024 * 1024 * 1024 / 4096;
 
 		assert(0 <= req.op && req.op <= 3);
 		//printf("op: %d, lba: %u, size: %d\n", req.op, req.lba, req.io_size);
