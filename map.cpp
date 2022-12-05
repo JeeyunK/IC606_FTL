@@ -6,6 +6,7 @@ extern int RPOLICY;
 extern uint32_t target_ppa;
 extern queue<int> freeq;
 extern list<int> lba_list;
+extern bool BIP;
 
 int counter = 0;
 
@@ -87,24 +88,40 @@ uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats, bool ismiss){ // 
 			lba_list.erase(it);
 	//		printf("find lba\n");
 		}
-		lba_list.push_front(lba);
+		if (BIP && (((double)rand()/(double)RAND_MAX)< 1/32)){
+			lba_list.push_back(lba);
+		}else{
+			lba_list.push_front(lba);
+		}
 	}else{
 		if (ismiss){
 			victim_lba = lba_list.back();
 			lba_list.pop_back();
 		}
 		if(victim_lba == lba){
-			lba_list.push_front(lba);
+			if (BIP && (((double)rand()/(double)RAND_MAX)< 1/32)){
+				lba_list.push_back(lba);
+			}else{
+				lba_list.push_front(lba);
+			}
 		}else{
 			it = find(lba_list.begin(), lba_list.end(), lba);
 			if (it != lba_list.end()){
 				lba_list.erase(it);
-				lba_list.push_front(lba);
+				if (BIP && (((double)rand()/(double)RAND_MAX)< 1/32)){
+					lba_list.push_back(lba);
+				}else{
+					lba_list.push_front(lba);
+				}
 				find_flag = true;
 	//			printf("find lba\n");
 			}
 			if(!find_flag){
-				lba_list.push_front(lba);
+				if (BIP && (((double)rand()/(double)RAND_MAX)< 1/32)){
+					lba_list.push_back(lba);
+				}else{
+					lba_list.push_front(lba);
+				}
 			}	
 		}
 	}

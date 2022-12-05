@@ -40,3 +40,7 @@ RPOLICY 변수는 main.cpp에 전역변수로 정의되어있음
 3. 여러 latency 추가
 
 map.cpp 파일이랑 gc.cpp 파일에 flash에 접근하는 부분은 //TODO 로 표시해둠
+
+4. add Insertion Policy as BIP
+
+if you wand use BIP, let BIP as true

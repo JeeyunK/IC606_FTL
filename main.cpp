@@ -14,6 +14,7 @@ STATS* stats;
 int RPOLICY; //0: FIFO, 1: LRU, 2: Clock-based NRU, 3: Random
 char* cRPOLICY;
 char* workload;
+bool BIP = true;
 
 static off_t fdlength(int fd)
 {
@@ -190,6 +191,7 @@ int main(int argc, char **argv) {
 	ssd->mtable_size = atoi(argv[3]);
 	printf("***SIMULATION SETUP***\n");
 	printf("* Victim Selection Policy: %s\n", cRPOLICY);
+	if (BIP) printf("* Victim Insertion Policy: BIP\n");
 	printf("* Workload: %s\n* Mapping table size ratio: %d", workload, ssd->mtable_size);
 	ssd->mtable_size = (int)LBANUM/ssd->mtable_size;
 	printf(" (size: %d)\n", ssd->mtable_size);
