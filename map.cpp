@@ -100,7 +100,7 @@ uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats, bool ismiss){ // 
 	//			printf("find lba\n");
 			}
 		}
-		if (BIP && (((double)rand()/(double)RAND_MAX)< 1/32)){
+		if (BIP && (rand() < RAND_MAX / 32)){
 			lba_list.push_back(lba);
 		}else{
 			lba_list.push_front(lba);
@@ -111,7 +111,7 @@ uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats, bool ismiss){ // 
 			lba_list.pop_back();
 		}
 		if(victim_lba == lba){
-			if (BIP && (((double)rand()/(double)RAND_MAX)< 1/32)){
+			if (BIP && (rand() < RAND_MAX / 32)){
 				lba_list.push_back(lba);
 			}else{
 				lba_list.push_front(lba);
@@ -121,7 +121,7 @@ uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats, bool ismiss){ // 
 				it = find(lba_list.begin(), lba_list.end(), lba);
 				if (it != lba_list.end()){
 					lba_list.erase(it);
-					if (BIP && (((double)rand()/(double)RAND_MAX)< 1/32)){
+					if (BIP && (rand() < RAND_MAX / 32)){
 						lba_list.push_back(lba);
 					}else{
 						lba_list.push_front(lba);
@@ -131,7 +131,7 @@ uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats, bool ismiss){ // 
 				}
 			}
 			if(!find_flag){
-				if (BIP && (((double)rand()/(double)RAND_MAX)< 1/32)){
+				if (BIP && (rand() < RAND_MAX / 32)){
 					lba_list.push_back(lba);
 				}else{
 					lba_list.push_front(lba);
