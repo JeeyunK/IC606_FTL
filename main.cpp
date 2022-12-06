@@ -31,12 +31,42 @@ static off_t fdlength(int fd)
 	return ret;
 }
 
+#define align_to_1mb(x) (((x) + (1024 * 1024 - 1)) / (1024 * 1024) * (1024 * 1024))
+
 void ssd_init(SSD* ssd, STATS* stats) {
-	ssd->itable = (bool*)calloc(NOP, sizeof(bool));
-	ssd->oob = (OOB*)calloc(NOP, sizeof(OOB));
-	ssd->mtable = (m_unit*)malloc(sizeof(m_unit)*ssd->mtable_size);
-	ssd->lkuptable = (uint32_t*)malloc(sizeof(uint32_t)*LBANUM);
-	ssd->fmtable = (uint32_t*)malloc(sizeof(uint32_t)*LBANUM);
+	long offset = 0;
+	char *mem;
+	int fd = open("/dev/hugepages/ftl-test", O_RDWR | O_CREAT, 0644);
+	if (fd < 0) {
+		perror("Failed to open hugepages");
+		exit(1);
+	}
+
+	if (ftruncate(fd, 1*G) < 0) {
+		perror("Failed to set hugepage size");
+		exit(1);
+	}
+
+	mem = (char*)mmap(NULL, 1*G, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	if (mem == MAP_FAILED) {
+		perror("Failed to mmap hugepage");
+		exit(1);
+	}
+
+	close(fd);
+	memset(mem, 0, 1*G);
+
+	// Align to 1MiB
+	ssd->itable = (bool*)mem;
+	offset += align_to_1mb(NOP * sizeof(bool));
+	ssd->oob = (OOB*)(mem + offset);
+	offset += align_to_1mb(NOP * sizeof(OOB));
+	ssd->mtable = (m_unit*)(mem + offset);
+	offset += align_to_1mb(sizeof(m_unit)*ssd->mtable_size);
+	ssd->lkuptable = (uint32_t*)(mem + offset);
+	offset += align_to_1mb(sizeof(uint32_t)*LBANUM);
+	ssd->fmtable = (uint32_t*)(mem + offset);
+	offset += align_to_1mb(sizeof(uint32_t)*LBANUM);
 	for (int i=0;i<ssd->mtable_size;i++) {
 		ssd->mtable[i].lba = UINT_MAX;
 		ssd->mtable[i].ppa = UINT_MAX;
@@ -48,7 +78,12 @@ void ssd_init(SSD* ssd, STATS* stats) {
 		ssd->fmtable[i] = UINT_MAX;
 		ssd->lkuptable[i] = -1;
 	}
-	ssd->ictable = (int*)calloc(NOB, sizeof(int));
+	ssd->ictable = (int*)(mem + offset);
+	offset += align_to_1mb(NOB * sizeof(int));
+
+	printf("hugepage final offset = %ld\n", offset);
+
+	assert(offset < 1*G);
 
 	ssd->active.index = 0;
 	ssd->active.page = 0;
