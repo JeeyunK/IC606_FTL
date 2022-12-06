@@ -6,8 +6,6 @@ make clean; make all -j
 ./simul <trace_file> <replacement policy (FIFO/LRU/cNRU)> <cached mapping table size ratio (ex: 100)>
 ~~~
 
-trace file은 필요하면 경로 알려주거나 보내드림
-
 ### 시뮬레이션 세팅
 
 1. 디바이스 크기 설정
