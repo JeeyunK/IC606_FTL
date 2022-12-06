@@ -88,6 +88,22 @@ int update_mtable(int index, uint32_t ppa, SSD* ssd) {
 	return 0;
 }
 
+int update_gc_table(uint32_t lba, uint32_t ppa, SSD* ssd) {
+	int entry_index=-1;
+        /* check cached mapping table
+         */
+        entry_index = ssd->lkuptable[lba];
+	if (entry_index != -1) {
+		//cache hit
+		ssd->mtable[entry_index].ppa = ppa;
+		ssd->mtable[entry_index].dirty = true;
+	} else {
+		//cache miss
+		ssd->fmtable[lba] = ppa;
+	}
+	return 0;
+}
+
 uint32_t update_lba_list(uint32_t lba, SSD* ssd, STATS* stats, bool ismiss){ // LRU, update lba-Linked list for finding lru-lba as victim
 	uint32_t victim_lba = -1;
 	list<int>::iterator it;

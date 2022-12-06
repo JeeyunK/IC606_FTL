@@ -5,6 +5,8 @@
 uint32_t target_ppa = UINT_MAX-2;
 extern queue<int> freeq;
 
+#define NO_GC_CACHE 1
+
 uint32_t get_ppa(SSD* ssd, STATS* stats) {
 	if (ssd->active.page == PPB) {
 		//need new block
@@ -53,13 +55,18 @@ int do_gc(SSD* ssd, STATS* stats) {
 				abort();
 			}
 			//access mapping table
-			int index = check_mtable(tmp_lba, ssd, stats);
-			if (ssd->mtable[index].ppa != i) {
-				printf("mapping table has wrong ppa(lba: %u, oob ppa: %u, table ppa: %u)\n", 
-						tmp_lba, i, ssd->mtable[index].ppa);
-				abort();
+			if (NO_GC_CACHE == 0) {
+				int index = check_mtable(tmp_lba, ssd, stats);
+				if (ssd->mtable[index].ppa != i) {
+					printf("mapping table has wrong ppa(lba: %u, oob ppa: %u, table ppa: %u)\n", 
+							tmp_lba, i, ssd->mtable[index].ppa);
+					abort();
+				}
+				update_mtable(index, new_ppa, ssd);
+			} else {
+				update_gc_table(tmp_lba, new_ppa, ssd);
+
 			}
-			update_mtable(index, new_ppa, ssd);
 			validate_ppa(new_ppa, tmp_lba, ssd);
 			//TODO add flash access latency
 		}
